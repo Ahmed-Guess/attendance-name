@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Check-in</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
+        /* Custom CSS for a clean form look */
+        .card { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 0 15px -5px rgba(0, 0, 0, 0.04); }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Ensure the link is styled like text, not a typical link */
+        #lectureCodeDisplay a { text-decoration: none; color: inherit; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="card bg-white p-6 sm:p-8 rounded-xl w-full max-w-md">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Lecture Attendance Check-in</h1>
+        <p class="text-gray-500 mb-6">Scan your unique QR code to verify your location and record attendance.</p>
+
+        <!-- Configuration Notice -->
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6" role="alert">
+            <strong class="font-bold">CRITICAL:</strong> Update the constants in the JavaScript below with your specific location and the deployed Google Apps Script URL before hosting.
+        </div>
+
+        <form id="attendanceForm" class="space-y-4">
+            <!-- Lecture Code Display (Automatically set from QR code URL) -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Current Lecture Code (Confirmed)</label>
+                <p id="lectureCodeDisplay" class="font-bold text-lg text-blue-600 border p-3 rounded-lg bg-blue-50">
+                    -- Loading Code --
+                </p>
+                <!-- Hidden field to pass the value to JS submission -->
+                <input type="hidden" id="lectureCodeHidden" name="lectureCode" value=""> 
+                <p class="text-xs text-gray-500 mt-1">This code identifies the class session and is set by the QR code.</p>
+            </div>
+            
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">School Email Address</label>
+                <input type="email" id="email" name="email" required placeholder="your.name@school.edu"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+            </div>
+            
+            <button type="submit" id="submitButton" disabled
+                    class="w-full flex justify-center items-center px-4 py-2 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-blue-400 cursor-not-allowed transition duration-150 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                <span id="buttonText">Waiting for Lecture Code...</span>
+                <div id="loadingSpinner" class="spinner ml-2 hidden"></div>
+            </button>
+        </form>
+
+        <div id="messageContainer" class="mt-6 p-4 rounded-lg text-sm hidden" role="alert"></div>
+    </div>
+
+    <script>
+        // ======================================================================
+        // CRITICAL CONSTANTS - MUST BE UPDATED
+        // ======================================================================
+        
+        // 1. CLASSROOM LOCATION (Replace with your Amphi/Classroom coordinates)
+        const CLASSROOM_LAT = 36.7265; // Example Latitude (ALGIERS)
+        const CLASSROOM_LON = 3.0163;  // Example Longitude (ALGIERS)
+        
+        // 2. MAXIMUM ALLOWED DISTANCE (in meters)
+        const MAX_DISTANCE_METERS = 100; 
+        
+        // 3. GOOGLE APPS SCRIPT WEB APP URL (The URL you copied after deployment of Code.gs)
+        const APPS_SCRIPT_WEB_APP_URL = "YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL_HERE"; 
+
+        // ======================================================================
+        // DOM ELEMENTS AND UTILITIES
+        // ======================================================================
+        const form = document.getElementById('attendanceForm');
+        const submitButton = document.getElementById('submitButton');
+        const buttonText = document.getElementById('buttonText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const messageContainer = document.getElementById('messageContainer');
+        const lectureCodeDisplay = document.getElementById('lectureCodeDisplay');
+        const lectureCodeHidden = document.getElementById('lectureCodeHidden');
+
+        /**
+         * Parses the URL to find the 'code' parameter.
+         */
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            const results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        /**
+         * Haversine formula to calculate the distance between two points on the Earth.
+         * @returns {number} Distance in meters.
+         */
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000; // Earth's radius in meters
+            const phi1 = lat1 * Math.PI / 180;
+            const phi2 = lat2 * Math.PI / 180;
+            const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+            const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+                      Math.cos(phi1) * Math.cos(phi2) *
+                      Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return R * c; // Distance in meters
+        }
+
+        function setMessage(message, type = 'info') {
+            messageContainer.textContent = message;
+            messageContainer.className = 'mt-6 p-4 rounded-lg text-sm';
+            messageContainer.classList.remove('hidden');
+
+            // Reset classes
+            messageContainer.classList.remove('bg-green-100', 'text-green-800', 'border-green-400', 
+                                              'bg-red-100', 'text-red-800', 'border-red-400', 
+                                              'bg-blue-100', 'text-blue-800', 'border-blue-400');
+
+
+            if (type === 'success') {
+                messageContainer.classList.add('bg-green-100', 'text-green-800', 'border', 'border-green-400');
+            } else if (type === 'error') {
+                messageContainer.classList.add('bg-red-100', 'text-red-800', 'border', 'border-red-400');
+            } else {
+                messageContainer.classList.add('bg-blue-100', 'text-blue-800', 'border', 'border-blue-400');
+            }
+        }
+
+        function setSubmitting(isSubmitting) {
+            submitButton.disabled = isSubmitting;
+            loadingSpinner.classList.toggle('hidden', !isSubmitting);
+            submitButton.classList.toggle('bg-blue-600', !isSubmitting);
+            submitButton.classList.toggle('hover:bg-blue-700', !isSubmitting);
+            
+            if (isSubmitting) {
+                buttonText.textContent = 'Verifying Location...';
+            } else if (lectureCodeHidden.value) {
+                buttonText.textContent = 'Check Location & Submit Attendance';
+            } else {
+                buttonText.textContent = 'Waiting for Lecture Code...';
+                submitButton.classList.add('bg-blue-400'); // Grayed out if no code
+            }
+        }
+
+        // ======================================================================
+        // MAIN LOGIC
+        // ======================================================================
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            const lectureCode = lectureCodeHidden.value; // Get the secured code
+
+            if (!lectureCode) {
+                 setMessage("ERROR: Lecture code not found in the QR code URL. Cannot submit.", 'error');
+                 return;
+            }
+            if (APPS_SCRIPT_WEB_APP_URL === "YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL_HERE") {
+                setMessage("ERROR: Please update the APPS_SCRIPT_WEB_APP_URL in the script code.", 'error');
+                return;
+            }
+
+            setSubmitting(true);
+            setMessage('Requesting your current location...', 'info');
+
+            // 1. Get GPS Location
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const userLat = position.coords.latitude;
+                        const userLon = position.coords.longitude;
+                        
+                        // 2. Calculate Distance
+                        const distance = calculateDistance(userLat, userLon, CLASSROOM_LAT, CLASSROOM_LON);
+                        
+                        setMessage(`Calculated distance: ${distance.toFixed(1)} meters. Max allowed: ${MAX_DISTANCE_METERS} meters.`, 'info');
+
+                        // 3. Proximity Check
+                        if (distance <= MAX_DISTANCE_METERS) {
+                            setMessage('Proximity verified. Submitting attendance...', 'info');
+                            submitAttendance(email, lectureCode);
+                        } else {
+                            setMessage(`Submission failed. You are ${distance.toFixed(1)} meters away, which is outside the allowed ${MAX_DISTANCE_METERS} meter range.`, 'error');
+                            setSubmitting(false);
+                        }
+                    },
+                    (error) => {
+                        // Handle location permission denial or errors
+                        setMessage(`Location Error: ${error.message}. Please enable location services and refresh the page.`, 'error');
+                        setSubmitting(false);
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                setMessage("Geolocation is not supported by your device or browser.", 'error');
+                setSubmitting(false);
+            }
+        });
+
+        async function submitAttendance(email, lectureCode) {
+            // Data to be sent to the Google Apps Script Web App
+            const formData = new URLSearchParams();
+            formData.append('email', email);
+            formData.append('lectureCode', lectureCode);
+
+            try {
+                // Retry logic for API calls
+                let response = null;
+                const maxRetries = 3;
+                let delay = 1000;
+
+                for (let i = 0; i < maxRetries; i++) {
+                    try {
+                        response = await fetch(APPS_SCRIPT_WEB_APP_URL, {
+                            method: 'POST',
+                            body: formData.toString(),
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            }
+                        });
+
+                        if (response.ok) break; // Success, exit loop
+
+                    } catch (fetchError) {
+                        if (i === maxRetries - 1) throw fetchError;
+                        // Exponential backoff
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                    }
+                }
+
+                if (!response || !response.ok) throw new Error("Failed to get a successful response from the server.");
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    setMessage(`Success! Your attendance has been recorded for lecture code: ${lectureCode}.`, 'success');
+                    // Optional: Clear the email field after successful submission
+                    document.getElementById('email').value = '';
+
+                } else {
+                    setMessage(`Submission failed (Server Error): ${result.message || 'An unknown error occurred on the server.'}`, 'error');
+                }
+
+            } catch (error) {
+                console.error("Fetch Error:", error);
+                setMessage("Network Error: Could not connect to the attendance system after retries. Please check your connection.", 'error');
+            } finally {
+                setSubmitting(false);
+            }
+        }
+
+        // Initialize display and extract lecture code from URL
+        window.onload = () => {
+            const lectureCode = getUrlParameter('code').toUpperCase(); 
+            
+            if (lectureCode) {
+                lectureCodeDisplay.textContent = lectureCode;
+                lectureCodeHidden.value = lectureCode;
+                submitButton.disabled = false;
+                submitButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                submitButton.classList.remove('bg-blue-400');
+                buttonText.textContent = 'Check Location & Submit Attendance';
+                setMessage('Lecture code detected. Enter your email to proceed.', 'info');
+            } else {
+                lectureCodeDisplay.textContent = "Error: Code Missing";
+                lectureCodeDisplay.classList.remove('text-blue-600', 'bg-blue-50');
+                lectureCodeDisplay.classList.add('text-red-600', 'bg-red-100');
+                setMessage("ERROR: No lecture code found in the URL. Please ensure you scanned the correct QR code.", 'error');
+            }
+        };
+    </script>
+</body>
+</html>
