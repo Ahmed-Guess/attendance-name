@@ -8,11 +8,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
-        /* Custom CSS for a clean form look */
         .card { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 0 15px -5px rgba(0, 0, 0, 0.04); }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        /* Ensure the link is styled like text, not a typical link */
         #lectureCodeDisplay a { text-decoration: none; color: inherit; }
     </style>
 </head>
@@ -22,20 +20,17 @@
         <h1 class="text-3xl font-bold text-gray-900 mb-2">Lecture Attendance Check-in</h1>
         <p class="text-gray-500 mb-6">Scan your unique QR code to verify your location and record attendance.</p>
 
-        <!-- Configuration Notice -->
         <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6" role="alert">
             <strong class="font-bold">CRITICAL:</strong> Update the constants in the JavaScript below with your specific location and the deployed Google Apps Script URL before hosting.
         </div>
 
         <form id="attendanceForm" class="space-y-4">
-            <!-- Lecture Code Display (Automatically set from QR code URL) -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Current Lecture Code (Confirmed)</label>
                 <p id="lectureCodeDisplay" class="font-bold text-lg text-blue-600 border p-3 rounded-lg bg-blue-50">
                     -- Loading Code --
                 </p>
-                <!-- Hidden field to pass the value to JS submission -->
-                <input type="hidden" id="lectureCodeHidden" name="lectureCode" value=""> 
+                <input type="hidden" id="lectureCodeHidden" name="lectureCode" value="">
                 <p class="text-xs text-gray-500 mt-1">This code identifies the class session and is set by the QR code.</p>
             </div>
             
@@ -71,7 +66,7 @@
         const MAX_DISTANCE_METERS = 2000; 
         
         // 3. GOOGLE APPS SCRIPT WEB APP URL (The URL you copied after deployment of Code.gs)
-        const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxb_LWW2FiqMH9Neu8GGqBsTqBjpfoLC3VQESQdjuzeIfB8Rd0HLQzS4aXDPYR9zGzQ3Q/exec"; 
+        const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxb_LWW2FiqMH9Neu8GGqBsTqBjpfoLC3VQESQdjuzeIfB8Rd0HLQzS4aXDPYR9zGzQ3Q/exec";
 
         // ======================================================================
         // DOM ELEMENTS AND UTILITIES
@@ -84,9 +79,6 @@
         const lectureCodeDisplay = document.getElementById('lectureCodeDisplay');
         const lectureCodeHidden = document.getElementById('lectureCodeHidden');
 
-        /**
-         * Parses the URL to find the 'code' parameter.
-         */
         function getUrlParameter(name) {
             name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
             const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
@@ -94,10 +86,6 @@
             return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
         }
 
-        /**
-         * Haversine formula to calculate the distance between two points on the Earth.
-         * @returns {number} Distance in meters.
-         */
         function calculateDistance(lat1, lon1, lat2, lon2) {
             const R = 6371000; // Earth's radius in meters
             const phi1 = lat1 * Math.PI / 180;
@@ -110,7 +98,7 @@
                       Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-            return R * c; // Distance in meters
+            return R * c; 
         }
 
         function setMessage(message, type = 'info') {
@@ -118,11 +106,9 @@
             messageContainer.className = 'mt-6 p-4 rounded-lg text-sm';
             messageContainer.classList.remove('hidden');
 
-            // Reset classes
             messageContainer.classList.remove('bg-green-100', 'text-green-800', 'border-green-400', 
-                                              'bg-red-100', 'text-red-800', 'border-red-400', 
-                                              'bg-blue-100', 'text-blue-800', 'border-blue-400');
-
+                                             'bg-red-100', 'text-red-800', 'border-red-400', 
+                                             'bg-blue-100', 'text-blue-800', 'border-blue-400');
 
             if (type === 'success') {
                 messageContainer.classList.add('bg-green-100', 'text-green-800', 'border', 'border-green-400');
@@ -145,7 +131,7 @@
                 buttonText.textContent = 'Check Location & Submit Attendance';
             } else {
                 buttonText.textContent = 'Waiting for Lecture Code...';
-                submitButton.classList.add('bg-blue-400'); // Grayed out if no code
+                submitButton.classList.add('bg-blue-400'); 
             }
         }
 
@@ -156,7 +142,7 @@
             e.preventDefault();
             
             const email = document.getElementById('email').value.trim();
-            const lectureCode = lectureCodeHidden.value; // Get the secured code
+            const lectureCode = lectureCodeHidden.value; 
 
             if (!lectureCode) {
                  setMessage("ERROR: Lecture code not found in the QR code URL. Cannot submit.", 'error');
@@ -185,14 +171,14 @@
                         // 3. Proximity Check
                         if (distance <= MAX_DISTANCE_METERS) {
                             setMessage('Proximity verified. Submitting attendance...', 'info');
-                            submitAttendance(email, lectureCode);
+                            // THIS IS THE KEY CHANGE: Send location data to the server
+                            submitAttendance(email, lectureCode, userLat, userLon);
                         } else {
                             setMessage(`Submission failed. You are ${distance.toFixed(1)} meters away, which is outside the allowed ${MAX_DISTANCE_METERS} meter range.`, 'error');
                             setSubmitting(false);
                         }
                     },
                     (error) => {
-                        // Handle location permission denial or errors
                         setMessage(`Location Error: ${error.message}. Please enable location services and refresh the page.`, 'error');
                         setSubmitting(false);
                     },
@@ -204,14 +190,15 @@
             }
         });
 
-        async function submitAttendance(email, lectureCode) {
-            // Data to be sent to the Google Apps Script Web App
+        async function submitAttendance(email, lectureCode, lat, lon) {
             const formData = new URLSearchParams();
             formData.append('email', email);
             formData.append('lectureCode', lectureCode);
+            // ADDED: Append the user's location to the data sent to the server
+            formData.append('userLat', lat);
+            formData.append('userLon', lon);
 
             try {
-                // Retry logic for API calls
                 let response = null;
                 const maxRetries = 3;
                 let delay = 1000;
@@ -226,11 +213,10 @@
                             }
                         });
 
-                        if (response.ok) break; // Success, exit loop
+                        if (response.ok) break; 
 
                     } catch (fetchError) {
                         if (i === maxRetries - 1) throw fetchError;
-                        // Exponential backoff
                         await new Promise(resolve => setTimeout(resolve, delay));
                         delay *= 2;
                     }
@@ -242,7 +228,6 @@
 
                 if (result.status === 'success') {
                     setMessage(`Success! Your attendance has been recorded for lecture code: ${lectureCode}.`, 'success');
-                    // Optional: Clear the email field after successful submission
                     document.getElementById('email').value = '';
 
                 } else {
@@ -257,7 +242,6 @@
             }
         }
 
-        // Initialize display and extract lecture code from URL
         window.onload = () => {
             const lectureCode = getUrlParameter('code').toUpperCase(); 
             
@@ -278,15 +262,7 @@
         };
     </script>
 </body>
-
 </html>
-
-
-
-
-
-
-
 
 
 
