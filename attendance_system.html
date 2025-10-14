@@ -1,324 +1,343 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attendance Check-in</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
-        .card { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 0 15px -5px rgba(0, 0, 0, 0.04); }
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #lectureCodeDisplay a { text-decoration: none; color: inherit; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Check-in</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
+        .card { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 0 15px -5px rgba(0, 0, 0, 0.04); }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #lectureCodeDisplay a { text-decoration: none; color: inherit; }
+    </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-    <div class="card bg-white p-6 sm:p-8 rounded-xl w-full max-w-md">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">Lecture Attendance Check-in</h1>
-        <p class="text-gray-500 mb-6">Scan your unique QR code to verify your location and record attendance.</p>
+    <div class="card bg-white p-6 sm:p-8 rounded-xl w-full max-w-md">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Lecture Attendance Check-in</h1>
+        <p class="text-gray-500 mb-6">Scan your unique QR code to verify your location and record attendance.</p>
 
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6" role="alert">
-            <strong class="font-bold">CRITICAL:</strong> Update the constants in the JavaScript below with your specific location and the deployed Google Apps Script URL before hosting.
-        </div>
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6" role="alert">
+            <strong class="font-bold">CRITICAL:</strong> Update the constants in the Google Apps Script (`Code.gs`) and ensure you have the `doGet` function implemented there.
+        </div>
 
-        <form id="attendanceForm" class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Current Lecture Code (Confirmed)</label>
-                <p id="lectureCodeDisplay" class="font-bold text-lg text-blue-600 border p-3 rounded-lg bg-blue-50">
-                    -- Loading Code --
-                </p>
-                <input type="hidden" id="lectureCodeHidden" name="lectureCode" value="">
-                <input type="hidden" id="deviceTokenHidden" name="deviceToken" value="">
-                <p class="text-xs text-gray-500 mt-1">This code identifies the class session and is set by the QR code.</p>
-            </div>
-            
-            <div>
-                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">School Email Address</label>
-                <input type="email" id="email" name="email" required placeholder="your.name@school.edu"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
-            </div>
-            
-            <button type="submit" id="submitButton" disabled
-                    class="w-full flex justify-center items-center px-4 py-2 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-blue-400 cursor-not-allowed transition duration-150 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                <span id="buttonText">Waiting for Lecture Code...</span>
-                <div id="loadingSpinner" class="spinner ml-2 hidden"></div>
-            </button>
-        </form>
+        <form id="attendanceForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Current Lecture Code (Confirmed)</label>
+                <p id="lectureCodeDisplay" class="font-bold text-lg text-blue-600 border p-3 rounded-lg bg-blue-50">
+                    -- Loading Code --
+                </p>
+                <input type="hidden" id="lectureCodeHidden" name="lectureCode" value="">
+                <input type="hidden" id="deviceTokenHidden" name="deviceToken" value="">
+                <p class="text-xs text-gray-500 mt-1">This code identifies the class session and is set by the QR code.</p>
+            </div>
+            
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">School Email Address</label>
+                <input type="email" id="email" name="email" required placeholder="your.name@school.edu"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+            </div>
+            
+            <button type="submit" id="submitButton" disabled
+                    class="w-full flex justify-center items-center px-4 py-2 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-blue-400 cursor-not-allowed transition duration-150 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                <span id="buttonText">Waiting for Location Data...</span>
+                <div id="loadingSpinner" class="spinner ml-2 hidden"></div>
+            </button>
+        </form>
 
-        <div id="messageContainer" class="mt-6 p-4 rounded-lg text-sm hidden" role="alert"></div>
-    </div>
+        <div id="messageContainer" class="mt-6 p-4 rounded-lg text-sm hidden" role="alert"></div>
+    </div>
 
-    <script>
-        // ======================================================================
-        // CRITICAL CONSTANTS - MUST BE UPDATED
-        // ======================================================================
-        
-        // 1. CLASSROOM LOCATION (Replace with your Amphi/Classroom coordinates)
-        // const CLASSROOM_LAT = 36.688396; // Example Latitude (Sl)
-        //const CLASSROOM_LON = 2.866357;  // Example Longitude (Sl)
-        const CLASSROOM_LAT = 36.755063; // Example Latitude (Alpha-Beta)
-        const CLASSROOM_LON = 3.029051;  // Example Longitude (Alpha-Beta)
-        
-        // 2. MAXIMUM ALLOWED DISTANCE (in meters)
-        const MAX_DISTANCE_METERS = 2000; 
-        
-        // 3. GOOGLE APPS SCRIPT WEB APP URL (The URL you copied after deployment of Code.gs)
-        const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxDVkBofgoKrLiQSnRGeM-WgxT3dHdOWtr0oGLr9COQH6RyZIBtHuzkWWVQdb9zx6_VlA/exec";
-        
-        // ======================================================================
-        // ADDITION START: Unique Device Token Logic
-        // ======================================================================
-        const DEVICE_TOKEN_KEY = 'attendance_device_token';
+    <script>
+        // ======================================================================
+        // CRITICAL CONSTANTS (Hardcoded coordinates removed)
+        // ======================================================================
+        
+        // 1. CLASSROOM LOCATION: Coordinates are now fetched from the Apps Script backend.
+        let classroomCoordinates = null; 
+        
+        // 2. MAXIMUM ALLOWED DISTANCE (in meters)
+        const MAX_DISTANCE_METERS = 2000; 
+        
+        // 3. GOOGLE APPS SCRIPT WEB APP URL
+        const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyA2XkEYddkltWBn0qyx5qT3KsGlYquRNmkNNR1WqusoVs_j5wBLEo0-pQ5KEG7PuUBvg/exec";
+        
+        // ======================================================================
+        // Device Token Logic (UNCHANGED)
+        // ======================================================================
+        const DEVICE_TOKEN_KEY = 'attendance_device_token';
 
-        // Function to generate a proper UUID (Universally Unique Identifier)
-        function generateUUID() {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                const r = Math.random() * 16 | 0;
-                const v = c === 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
-        }
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
 
-        // Function to get the existing token or create a new one and save it
-        function getOrCreateDeviceToken() {
-            let token = localStorage.getItem(DEVICE_TOKEN_KEY);
-            if (!token) {
-                token = generateUUID();
-                localStorage.setItem(DEVICE_TOKEN_KEY, token);
-                console.log("New Device Token created and saved:", token);
+        function getOrCreateDeviceToken() {
+            let token = localStorage.getItem(DEVICE_TOKEN_KEY);
+            if (!token) {
+                token = generateUUID();
+                localStorage.setItem(DEVICE_TOKEN_KEY, token);
+                console.log("New Device Token created and saved:", token);
+            } else {
+                console.log("Existing Device Token loaded:", token);
+            }
+            return token;
+        }
+        
+        // ======================================================================
+        // DOM ELEMENTS AND UTILITIES (UNCHANGED)
+        // ======================================================================
+        const form = document.getElementById('attendanceForm');
+        const submitButton = document.getElementById('submitButton');
+        const buttonText = document.getElementById('buttonText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const messageContainer = document.getElementById('messageContainer');
+        const lectureCodeDisplay = document.getElementById('lectureCodeDisplay');
+        const lectureCodeHidden = document.getElementById('lectureCodeHidden');
+        const deviceTokenHidden = document.getElementById('deviceTokenHidden');
+
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            const results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000; // Earth's radius in meters
+            const phi1 = lat1 * Math.PI / 180;
+            const phi2 = lat2 * Math.PI / 180;
+            const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+            const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+                      Math.cos(phi1) * Math.cos(phi2) *
+                      Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return R * c; 
+        }
+
+        function setMessage(message, type = 'info') {
+            messageContainer.textContent = message;
+            messageContainer.className = 'mt-6 p-4 rounded-lg text-sm';
+            messageContainer.classList.remove('hidden');
+
+            messageContainer.classList.remove('bg-green-100', 'text-green-800', 'border-green-400', 
+                                             'bg-red-100', 'text-red-800', 'border-red-400', 
+                                             'bg-blue-100', 'text-blue-800', 'border-blue-400');
+
+            if (type === 'success') {
+                messageContainer.classList.add('bg-green-100', 'text-green-800', 'border', 'border-green-400');
+            } else if (type === 'error') {
+                messageContainer.classList.add('bg-red-100', 'text-red-800', 'border', 'border-red-400');
+            } else {
+                messageContainer.classList.add('bg-blue-100', 'text-blue-800', 'border', 'border-blue-400');
+            }
+        }
+
+        function setSubmitting(isSubmitting) {
+            submitButton.disabled = isSubmitting;
+            loadingSpinner.classList.toggle('hidden', !isSubmitting);
+            submitButton.classList.toggle('bg-blue-600', !isSubmitting);
+            submitButton.classList.toggle('hover:bg-blue-700', !isSubmitting);
+            
+            if (isSubmitting) {
+                buttonText.textContent = 'Verifying Location...';
+            } else if (lectureCodeHidden.value && classroomCoordinates) {
+                buttonText.textContent = 'Check Location & Submit Attendance';
+            } else if (lectureCodeHidden.value && !classroomCoordinates) {
+                 buttonText.textContent = 'Loading Location Data...';
             } else {
-                console.log("Existing Device Token loaded:", token);
+                buttonText.textContent = 'Waiting for Lecture Code...';
+                submitButton.classList.add('bg-blue-400'); 
+            }
+        }
+
+        // ======================================================================
+        // NEW: FUNCTION TO SECURELY FETCH COORDINATES
+        // ======================================================================
+        async function fetchClassroomCoordinates() {
+            try {
+                // Fetch using the APPS_SCRIPT_WEB_APP_URL, which will hit the doGet function
+                const response = await fetch(APPS_SCRIPT_WEB_APP_URL);
+                
+                if (!response.ok) throw new Error("Failed to fetch coordinates from server.");
+                
+                const data = await response.json();
+                
+                // Check for coordinate keys in the response
+                if (typeof data.classroomLat !== 'number' || typeof data.classroomLon !== 'number') {
+                     throw new Error("Invalid coordinate format received from server.");
+                }
+                
+                // Save the fetched coordinates globally
+                classroomCoordinates = data;
+                console.log("Classroom coordinates successfully loaded from server.");
+                
+            } catch (error) {
+                console.error("Coordinate Fetch Error:", error);
+                setMessage("FATAL ERROR: Could not securely load classroom location data. Please ensure the Apps Script is deployed with the doGet function.", 'error');
             }
-            return token;
         }
-        // ======================================================================
-        // ADDITION END: Unique Device Token Logic
-        // ======================================================================
         
-        // ======================================================================
-        // DOM ELEMENTS AND UTILITIES
-        // ======================================================================
-        const form = document.getElementById('attendanceForm');
-        const submitButton = document.getElementById('submitButton');
-        const buttonText = document.getElementById('buttonText');
-        const loadingSpinner = document.getElementById('loadingSpinner');
-        const messageContainer = document.getElementById('messageContainer');
-        const lectureCodeDisplay = document.getElementById('lectureCodeDisplay');
-        const lectureCodeHidden = document.getElementById('lectureCodeHidden');
-        // ADDITION: Reference to the new hidden token field
-        const deviceTokenHidden = document.getElementById('deviceTokenHidden');
-
-        function getUrlParameter(name) {
-            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
-            const results = regex.exec(location.search);
-            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
-        }
-
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371000; // Earth's radius in meters
-            const phi1 = lat1 * Math.PI / 180;
-            const phi2 = lat2 * Math.PI / 180;
-            const deltaPhi = (lat2 - lat1) * Math.PI / 180;
-            const deltaLambda = (lon2 - lon1) * Math.PI / 180;
-
-            const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-                      Math.cos(phi1) * Math.cos(phi2) *
-                      Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-            return R * c; 
-        }
-
-        function setMessage(message, type = 'info') {
-            messageContainer.textContent = message;
-            messageContainer.className = 'mt-6 p-4 rounded-lg text-sm';
-            messageContainer.classList.remove('hidden');
-
-            messageContainer.classList.remove('bg-green-100', 'text-green-800', 'border-green-400', 
-                                             'bg-red-100', 'text-red-800', 'border-red-400', 
-                                             'bg-blue-100', 'text-blue-800', 'border-blue-400');
-
-            if (type === 'success') {
-                messageContainer.classList.add('bg-green-100', 'text-green-800', 'border', 'border-green-400');
-            } else if (type === 'error') {
-                messageContainer.classList.add('bg-red-100', 'text-red-800', 'border', 'border-red-400');
-            } else {
-                messageContainer.classList.add('bg-blue-100', 'text-blue-800', 'border', 'border-blue-400');
-            }
-        }
-
-        function setSubmitting(isSubmitting) {
-            submitButton.disabled = isSubmitting;
-            loadingSpinner.classList.toggle('hidden', !isSubmitting);
-            submitButton.classList.toggle('bg-blue-600', !isSubmitting);
-            submitButton.classList.toggle('hover:bg-blue-700', !isSubmitting);
-            
-            if (isSubmitting) {
-                buttonText.textContent = 'Verifying Location...';
-            } else if (lectureCodeHidden.value) {
-                buttonText.textContent = 'Check Location & Submit Attendance';
-            } else {
-                buttonText.textContent = 'Waiting for Lecture Code...';
-                submitButton.classList.add('bg-blue-400'); 
-            }
-        }
-
-        // ======================================================================
-        // MAIN LOGIC
-        // ======================================================================
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const email = document.getElementById('email').value.trim();
-            const lectureCode = lectureCodeHidden.value; 
-            // ADDITION: Retrieve the device token value
-            const deviceToken = deviceTokenHidden.value; 
-
-            if (!lectureCode) {
-                 setMessage("ERROR: Lecture code not found in the QR code URL. Cannot submit.", 'error');
-                 return;
-            }
-            if (!deviceToken) {
-                 setMessage("FATAL ERROR: Device token missing. Please try refreshing your browser.", 'error');
-                 return;
-            }
-            if (APPS_SCRIPT_WEB_APP_URL === "https://script.google.com/macros/s/AKfycbw18qsrCOb6g0Il4kH5zPhW_vlsZW2CQSlv5BWAqsro8KoCVg6QAnCtlk7h39Jq6SyjqA/exec") {
-                setMessage("ERROR: Please update the APPS_SCRIPT_WEB_APP_URL in the script code.", 'error');
+        // ======================================================================
+        // MAIN LOGIC (MODIFIED TO USE FETCHED COORDINATES)
+        // ======================================================================
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Ensure coordinates are loaded before proceeding
+            if (!classroomCoordinates) {
+                setMessage("ERROR: Classroom coordinates not loaded yet. Please wait a moment and try again.", 'error');
                 return;
             }
 
-            setSubmitting(true);
-            setMessage('Requesting your current location...', 'info');
+            const email = document.getElementById('email').value.trim();
+            const lectureCode = lectureCodeHidden.value; 
+            const deviceToken = deviceTokenHidden.value; 
 
-            // 1. Get GPS Location
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const userLat = position.coords.latitude;
-                        const userLon = position.coords.longitude;
-                        
-                        // 2. Calculate Distance
-                        const distance = calculateDistance(userLat, userLon, CLASSROOM_LAT, CLASSROOM_LON);
-                        
-                        setMessage(`Calculated distance: ${distance.toFixed(1)} meters. Max allowed: ${MAX_DISTANCE_METERS} meters.`, 'info');
+            if (!lectureCode) {
+                 setMessage("ERROR: Lecture code not found in the QR code URL. Cannot submit.", 'error');
+                 return;
+            }
+            if (!deviceToken) {
+                 setMessage("FATAL ERROR: Device token missing. Please try refreshing your browser.", 'error');
+                 return;
+            }
+            // Note: Your URL placeholder check uses an outdated URL. Remove or update this line
+            /*             if (APPS_SCRIPT_WEB_APP_URL === "https://script.google.com/macros/s/AKfycbw18qsrCOb6g0Il4kH5zPhW_vlsZW2CQSlv5BWAqsro8KoCVg6QAnCtlk7h39Jq6SyjqA/exec") {
+                setMessage("ERROR: Please update the APPS_SCRIPT_WEB_APP_URL in the script code.", 'error');
+                return;
+            }
+            */
 
-                        // 3. Proximity Check
-                        if (distance <= MAX_DISTANCE_METERS) {
-                            setMessage('Proximity verified. Submitting attendance...', 'info');
-                            // KEY CHANGE: Pass the new deviceToken to the submission function
-                            submitAttendance(email, lectureCode, userLat, userLon, deviceToken);
-                        } else {
-                            setMessage(`Submission failed. You are ${distance.toFixed(1)} meters away, which is outside the allowed ${MAX_DISTANCE_METERS} meter range.`, 'error');
-                            setSubmitting(false);
-                        }
-                    },
-                    (error) => {
-                        setMessage(`Location Error: ${error.message}. Please enable location services and refresh the page.`, 'error');
-                        setSubmitting(false);
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                );
-            } else {
-                setMessage("Geolocation is not supported by your device or browser.", 'error');
-                setSubmitting(false);
-            }
-        });
+            setSubmitting(true);
+            setMessage('Requesting your current location...', 'info');
 
-        // MODIFIED: Added deviceToken parameter
-        async function submitAttendance(email, lectureCode, lat, lon, deviceToken) {
-            const formData = new URLSearchParams();
-            formData.append('email', email);
-            formData.append('lectureCode', lectureCode);
-            formData.append('userLat', lat);
-            formData.append('userLon', lon);
-            // ADDITION: Append the device token to the data sent to the server
-            formData.append('deviceToken', deviceToken);
+            // 1. Get GPS Location
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const userLat = position.coords.latitude;
+                        const userLon = position.coords.longitude;
+                        
+                        // 2. Calculate Distance - USES THE NEWLY FETCHED COORDINATES
+                        const distance = calculateDistance(
+                            userLat, 
+                            userLon, 
+                            classroomCoordinates.classroomLat, 
+                            classroomCoordinates.classroomLon
+                        );
+                        
+                        setMessage(`Calculated distance: ${distance.toFixed(1)} meters. Max allowed: ${MAX_DISTANCE_METERS} meters.`, 'info');
 
-            try {
-                let response = null;
-                const maxRetries = 3;
-                let delay = 1000;
+                        // 3. Proximity Check
+                        if (distance <= MAX_DISTANCE_METERS) {
+                            setMessage('Proximity verified. Submitting attendance...', 'info');
+                            submitAttendance(email, lectureCode, userLat, userLon, deviceToken);
+                        } else {
+                            setMessage(`Submission failed. You are ${distance.toFixed(1)} meters away, which is outside the allowed ${MAX_DISTANCE_METERS} meter range.`, 'error');
+                            setSubmitting(false);
+                        }
+                    },
+                    (error) => {
+                        setMessage(`Location Error: ${error.message}. Please enable location services and refresh the page.`, 'error');
+                        setSubmitting(false);
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                setMessage("Geolocation is not supported by your device or browser.", 'error');
+                setSubmitting(false);
+            }
+        });
 
-                for (let i = 0; i < maxRetries; i++) {
-                    try {
-                        response = await fetch(APPS_SCRIPT_WEB_APP_URL, {
-                            method: 'POST',
-                            body: formData.toString(),
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded'
-                            }
-                        });
+        // MODIFIED: submitAttendance is UNCHANGED as it correctly uses the passed parameters.
+        async function submitAttendance(email, lectureCode, lat, lon, deviceToken) {
+            const formData = new URLSearchParams();
+            formData.append('email', email);
+            formData.append('lectureCode', lectureCode);
+            formData.append('userLat', lat);
+            formData.append('userLon', lon);
+            formData.append('deviceToken', deviceToken);
 
-                        if (response.ok) break; 
+            try {
+                let response = null;
+                const maxRetries = 3;
+                let delay = 1000;
 
-                    } catch (fetchError) {
-                        if (i === maxRetries - 1) throw fetchError;
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        delay *= 2;
-                    }
-                }
+                for (let i = 0; i < maxRetries; i++) {
+                    try {
+                        response = await fetch(APPS_SCRIPT_WEB_APP_URL, {
+                            method: 'POST',
+                            body: formData.toString(),
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            }
+                        });
 
-                if (!response || !response.ok) throw new Error("Failed to get a successful response from the server.");
+                        if (response.ok) break; 
 
-                const result = await response.json();
+                    } catch (fetchError) {
+                        if (i === maxRetries - 1) throw fetchError;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                    }
+                }
 
-                if (result.status === 'success') {
-                    setMessage(`Success! Your attendance has been recorded for lecture code: ${lectureCode}.`, 'success');
-                    document.getElementById('email').value = '';
-                } else {
-                    // This is where a rejection from the backend (e.g., duplicate device) will show up
-                    setMessage(`Submission failed (Server Error): ${result.message || 'An unknown error occurred on the server.'}`, 'error');
-                }
+                if (!response || !response.ok) throw new Error("Failed to get a successful response from the server.");
 
-            } catch (error) {
-                console.error("Fetch Error:", error);
-                setMessage("Network Error: Could not connect to the attendance system after retries. Please check your connection.", 'error');
-            } finally {
-                setSubmitting(false);
-            }
-        }
+                const result = await response.json();
 
-        window.onload = () => {
-            // CRITICAL ADDITION: Get or create the unique token and set the hidden field
-            const token = getOrCreateDeviceToken();
-            deviceTokenHidden.value = token;
+                if (result.status === 'success') {
+                    setMessage(`Success! Your attendance has been recorded for lecture code: ${lectureCode}.`, 'success');
+                    document.getElementById('email').value = '';
+                } else {
+                    setMessage(`Submission failed (Server Error): ${result.message || 'An unknown error occurred on the server.'}`, 'error');
+                }
 
-            const lectureCode = getUrlParameter('code').toUpperCase(); 
-            
-            if (lectureCode) {
-                lectureCodeDisplay.textContent = lectureCode;
-                lectureCodeHidden.value = lectureCode;
-                submitButton.disabled = false;
-                submitButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
-                submitButton.classList.remove('bg-blue-400');
-                buttonText.textContent = 'Check Location & Submit Attendance';
-                setMessage('Lecture code detected. Enter your email to proceed.', 'info');
-            } else {
-                lectureCodeDisplay.textContent = "Error: Code Missing";
-                lectureCodeDisplay.classList.remove('text-blue-600', 'bg-blue-50');
-                lectureCodeDisplay.classList.add('text-red-600', 'bg-red-100');
-                setMessage("ERROR: No lecture code found in the URL. Please ensure you scanned the correct QR code.", 'error');
-            }
-        };
-    </script>
+            } catch (error) {
+                console.error("Fetch Error:", error);
+                setMessage("Network Error: Could not connect to the attendance system after retries. Please check your connection.", 'error');
+            } finally {
+                setSubmitting(false);
+            }
+        }
+
+        // MODIFIED window.onload (Now asynchronous to wait for coordinates)
+        window.onload = async () => {
+             // 1. Fetch coordinates first (asynchronously)
+            await fetchClassroomCoordinates();
+
+            // 2. CRITICAL ADDITION: Get or create the unique token and set the hidden field
+            const token = getOrCreateDeviceToken();
+            deviceTokenHidden.value = token;
+
+            const lectureCode = getUrlParameter('code').toUpperCase(); 
+            
+            if (lectureCode) {
+                lectureCodeDisplay.textContent = lectureCode;
+                lectureCodeHidden.value = lectureCode;
+                submitButton.disabled = !classroomCoordinates; // Disable if coordinates aren't loaded
+                submitButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                submitButton.classList.remove('bg-blue-400');
+                buttonText.textContent = classroomCoordinates ? 'Check Location & Submit Attendance' : 'Loading Location Data...';
+                setMessage('Lecture code detected. Enter your email to proceed.', 'info');
+            } else {
+                lectureCodeDisplay.textContent = "Error: Code Missing";
+                lectureCodeDisplay.classList.remove('text-blue-600', 'bg-blue-50');
+                lectureCodeDisplay.classList.add('text-red-600', 'bg-red-100');
+                setMessage("ERROR: No lecture code found in the URL. Please ensure you scanned the correct QR code.", 'error');
+            }
+        };
+    </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
