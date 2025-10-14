@@ -333,36 +333,5 @@
     </script>
 </body>
 </html>
-⚠️ Final Step: Ensure Backend Alignment
-Since your frontend now expects the coordinates via an asynchronous fetch (not google.script.run) hitting your APPS_SCRIPT_WEB_APP_URL, make sure your Code.gs has a doGet(e) function that returns the coordinates:
 
-JavaScript
-
-// --- Code.gs ---
-
-function doGet(e) {
-  // Check if a request parameter is present. If not, this is likely the frontend fetching config.
-  if (!e || Object.keys(e.parameter).length === 0) {
-    const config = getConstants(); // Assumes getConstants is now returning latitude and longitude
-    
-    // Return a JSON response with the coordinates
-    return ContentService.createTextOutput(JSON.stringify({
-      latitude: config.latitude,
-      longitude: config.longitude
-    }))
-    .setMimeType(ContentService.MimeType.JSON);
-  }
-  
-  // If there are parameters, assume it's a POST/other request and pass to main handler
-  // ... (rest of your doGet implementation) ...
-}
-
-function getConstants() {
-  // MUST return latitude and longitude keys for the frontend fetch to work!
-  return {
-    latitude: 34.0522,      // <--- Use your ACTUAL classroom latitude
-    longitude: -118.2437,   // <--- Use your ACTUAL classroom longitude
-    // ... other non-sensitive constants ...
-  };
-}
 
