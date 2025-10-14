@@ -59,7 +59,7 @@
         // 2. MAX_DISTANCE_METERS REMOVED: The value is now private to the Code.gs backend.
         
         // 3. GOOGLE APPS SCRIPT WEB APP URL
-        const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw57MpF033sPDK_hfpov-IWVtKuPfW3mIXAuOj1vMvOkF77vuf3c_B6qGOQHiRagiBpmA/exec";
+        const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx9Dou6xRV9yUJMHEJmdNG4V0jjWW8YFAevvUCGthx2Z1jxJwxNEFrMONJ2jzX9R-FwwQ/exec";
         
         // ======================================================================
         // Device Token Logic (UNCHANGED)
@@ -226,7 +226,7 @@
                             classroomCoordinates.latitude, 
                             classroomCoordinates.longitude
                         );
-                        
+
                         // *** CRITICAL SECURITY CHANGE: REMOVED client-side proximity check ***
                         // The server (Code.gs) will perform the secure check using MAX_DISTANCE_METERS.
                         
@@ -365,3 +365,4 @@ function getConstants() {
     // ... other non-sensitive constants ...
   };
 }
+
