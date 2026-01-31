@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8"> 
@@ -12,7 +13,6 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #lectureCodeDisplay a { text-decoration: none; color: inherit; }
     </style>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
@@ -50,21 +50,18 @@
 
     <script>
         // ======================================================================
-        // CRITICAL CONSTANTS (Secured)
+        // 1. CONFIGURATION & CONSTANTS
         // ======================================================================
         
-        // 1. CLASSROOM LOCATION: Coordinates are now fetched from the Apps Script backend.
         let classroomCoordinates = null;
-        
-        // 2. MAX_DISTANCE_METERS REMOVED: The value is now private to the Code.gs backend.
-        
-        // 3. GOOGLE APPS SCRIPT WEB APP URL
-        const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyGw2g2YupUCmPNb56udDjTRLRj4Gi0YzfDAD2siAbviVpyfERW_YmNOLRg3lR2RnVbpQ/exec";
-        
-        // ======================================================================
-        // Device Token Logic (UNCHANGED)
-        // ======================================================================
         const DEVICE_TOKEN_KEY = 'attendance_device_token';
+        
+        // UPDATE THIS URL with your deployed Google Apps Script Web App URL
+        const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyHuOiqVdz3CfmB2WCRB_Q8Zpmjw7-Nxk_h6mC3W9bGzfSOotmKIt_KLN0MJYYIlz6rIw/exec";
+        
+        // ======================================================================
+        // 2. DEVICE TRACKING LOGIC (Anti-Fraud)
+        // ======================================================================
 
         function generateUUID() {
             return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -74,20 +71,27 @@
             });
         }
 
+        /**
+         * Checks both localStorage and sessionStorage for a token.
+         * If none exists, it generates one. This makes it harder for students
+         * to "reset" their device ID by simply opening a new tab.
+         */
         function getOrCreateDeviceToken() {
-            let token = localStorage.getItem(DEVICE_TOKEN_KEY);
+            let token = localStorage.getItem(DEVICE_TOKEN_KEY) || sessionStorage.getItem(DEVICE_TOKEN_KEY);
+            
             if (!token) {
                 token = generateUUID();
-                localStorage.setItem(DEVICE_TOKEN_KEY, token);
-                console.log("New Device Token created and saved:", token);
-            } else {
-                console.log("Existing Device Token loaded:", token);
+                console.log("New Device Token generated.");
             }
+            
+            // Re-sync both storages
+            localStorage.setItem(DEVICE_TOKEN_KEY, token);
+            sessionStorage.setItem(DEVICE_TOKEN_KEY, token);
             return token;
         }
         
         // ======================================================================
-        // DOM ELEMENTS AND UTILITIES (UNCHANGED)
+        // 3. UI & UTILITY FUNCTIONS
         // ======================================================================
         const form = document.getElementById('attendanceForm');
         const submitButton = document.getElementById('submitButton');
@@ -105,36 +109,35 @@
             return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
         }
 
+        /**
+         * Client-side distance calculation for UI feedback.
+         * The official security check is still performed on the Backend.
+         */
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371000; // Earth's radius in meters
+            const R = 6371000; 
             const phi1 = lat1 * Math.PI / 180;
             const phi2 = lat2 * Math.PI / 180;
-            const deltaPhi = (lat2 - lat1) * Math.PI / 180;
-            const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+            const dPhi = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
 
-            const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+            const a = Math.sin(dPhi / 2) * Math.sin(dPhi / 2) +
                       Math.cos(phi1) * Math.cos(phi2) *
-                      Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
             return R * c; 
         }
 
         function setMessage(message, type = 'info') {
             messageContainer.textContent = message;
-            messageContainer.className = 'mt-6 p-4 rounded-lg text-sm';
+            messageContainer.className = 'mt-6 p-4 rounded-lg text-sm border';
             messageContainer.classList.remove('hidden');
 
-            messageContainer.classList.remove('bg-green-100', 'text-green-800', 'border-green-400', 
-                                             'bg-red-100', 'text-red-800', 'border-red-400', 
-                                             'bg-blue-100', 'text-blue-800', 'border-blue-400');
-
             if (type === 'success') {
-                messageContainer.classList.add('bg-green-100', 'text-green-800', 'border', 'border-green-400');
+                messageContainer.classList.add('bg-green-100', 'text-green-800', 'border-green-400');
             } else if (type === 'error') {
-                messageContainer.classList.add('bg-red-100', 'text-red-800', 'border', 'border-red-400');
+                messageContainer.classList.add('bg-red-100', 'text-red-800', 'border-red-400');
             } else {
-                messageContainer.classList.add('bg-blue-100', 'text-blue-800', 'border', 'border-blue-400');
+                messageContainer.classList.add('bg-blue-100', 'text-blue-800', 'border-blue-400');
             }
         }
 
@@ -142,112 +145,73 @@
             submitButton.disabled = isSubmitting;
             loadingSpinner.classList.toggle('hidden', !isSubmitting);
             submitButton.classList.toggle('bg-blue-600', !isSubmitting);
-            submitButton.classList.toggle('hover:bg-blue-700', !isSubmitting);
             
             if (isSubmitting) {
-                buttonText.textContent = 'Verifying Location...';
-            } else if (lectureCodeHidden.value && classroomCoordinates) {
-                buttonText.textContent = 'Check Location & Submit Attendance';
-            } else if (lectureCodeHidden.value && !classroomCoordinates) {
-                 buttonText.textContent = 'Loading Location Data...';
+                buttonText.textContent = 'Verifying Data...';
             } else {
-                buttonText.textContent = 'Waiting for Lecture Code...';
-                submitButton.classList.add('bg-blue-400'); 
+                buttonText.textContent = 'Check Location & Submit Attendance';
             }
         }
 
         // ======================================================================
-        // MODIFIED: FUNCTION TO SECURELY FETCH COORDINATES
+        // 4. DATA FETCHING & FORM SUBMISSION
         // ======================================================================
+
         async function fetchClassroomCoordinates() {
             try {
-                // Fetch using the APPS_SCRIPT_WEB_APP_URL, which will hit the doGet function
                 const response = await fetch(APPS_SCRIPT_WEB_APP_URL);
-                
-                if (!response.ok) throw new Error("Failed to fetch coordinates from server.");
-                
+                if (!response.ok) throw new Error("Server error.");
                 const data = await response.json();
-                
-                // Check for coordinate keys in the response
-                if (typeof data.latitude !== 'number' || typeof data.longitude !== 'number') {
-                     throw new Error("Invalid coordinate format received from server. Check your Code.gs getConstants/doGet return keys.");
+                if (typeof data.latitude === 'number') {
+                    classroomCoordinates = data;
                 }
-                
-                // Save the fetched coordinates globally
-                // The keys here must match what your Code.gs returns (latitude/longitude)
-                classroomCoordinates = data; 
-                console.log("Classroom coordinates successfully loaded from server.");
-                
             } catch (error) {
                 console.error("Coordinate Fetch Error:", error);
-                setMessage("FATAL ERROR: Could not securely load classroom location data. Please ensure the Apps Script is deployed with the doGet function returning latitude and longitude.", 'error');
+                setMessage("ERROR: Could not load classroom location. Check Internet.", 'error');
             }
         }
-        
-        // ======================================================================
-        // MAIN LOGIC (MODIFIED TO REMOVE CLIENT-SIDE PROXIMITY CHECK)
-        // ======================================================================
+
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // 1. Pre-Submission Checks
             if (!classroomCoordinates) {
-                setMessage("ERROR: Classroom coordinates not loaded yet. Please wait a moment and try again.", 'error');
+                setMessage("Location data not ready. Please wait.", 'error');
                 return;
             }
 
             const email = document.getElementById('email').value.trim();
             const lectureCode = lectureCodeHidden.value; 
             const deviceToken = deviceTokenHidden.value; 
-
-            if (!lectureCode) {
-                 setMessage("ERROR: Lecture code not found in the QR code URL. Cannot submit.", 'error');
-                 return;
-            }
-            if (!deviceToken) {
-                 setMessage("FATAL ERROR: Device token missing. Please try refreshing your browser.", 'error');
-                 return;
-            }
             
             setSubmitting(true);
-            setMessage('Requesting your current location...', 'info');
+            setMessage('Requesting GPS location...', 'info');
 
-            // 2. Get GPS Location
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         const userLat = position.coords.latitude;
                         const userLon = position.coords.longitude;
                         
-                        // 3. Calculate Distance (for logging purposes only)
+                        // Calculate distance for the log (Server does the final validation)
                         const distance = calculateDistance(
-                            userLat, 
-                            userLon, 
-                            classroomCoordinates.latitude, 
-                            classroomCoordinates.longitude
+                            userLat, userLon, 
+                            classroomCoordinates.latitude, classroomCoordinates.longitude
                         );
 
-                        // *** CRITICAL SECURITY CHANGE: REMOVED client-side proximity check ***
-                        // The server (Code.gs) will perform the secure check using MAX_DISTANCE_METERS.
-                        
-                        setMessage(`Calculated distance: ${distance.toFixed(1)} meters. Sending to server for final verification...`, 'info');
-                        
-                        // 4. Submit to Server
                         submitAttendance(email, lectureCode, userLat, userLon, deviceToken, distance);
                     },
                     (error) => {
-                        setMessage(`Location Error: ${error.message}. Please enable location services and refresh the page.`, 'error');
+                        setMessage(`Location Error: ${error.message}. Please enable GPS.`, 'error');
                         setSubmitting(false);
                     },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 10000 }
                 );
             } else {
-                setMessage("Geolocation is not supported by your device or browser.", 'error');
+                setMessage("Geolocation not supported.", 'error');
                 setSubmitting(false);
             }
         });
 
-        // MODIFIED: Added distance parameter to be sent to the server for logging/check
         async function submitAttendance(email, lectureCode, lat, lon, deviceToken, distance) {
             const formData = new URLSearchParams();
             formData.append('email', email);
@@ -255,130 +219,53 @@
             formData.append('userLat', lat);
             formData.append('userLon', lon);
             formData.append('deviceToken', deviceToken);
-            // ADDITION: Send the calculated distance to the server for logging/check
             formData.append('distance', distance.toFixed(1)); 
 
             try {
-                let response = null;
-                const maxRetries = 3;
-                let delay = 1000;
-
-                for (let i = 0; i < maxRetries; i++) {
-                    try {
-                        response = await fetch(APPS_SCRIPT_WEB_APP_URL, {
-                            method: 'POST',
-                            body: formData.toString(),
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded'
-                            }
-                        });
-
-                        if (response.ok) break; 
-
-                    } catch (fetchError) {
-                        if (i === maxRetries - 1) throw fetchError;
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        delay *= 2;
-                    }
-                }
-
-                if (!response || !response.ok) throw new Error("Failed to get a successful response from the server.");
+                const response = await fetch(APPS_SCRIPT_WEB_APP_URL, {
+                    method: 'POST',
+                    body: formData.toString(),
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                });
 
                 const result = await response.json();
 
                 if (result.status === 'success') {
-                    setMessage(`Success! Your attendance has been recorded for lecture code: ${lectureCode}.`, 'success');
+                    setMessage(`Success! Attendance recorded for ${lectureCode}.`, 'success');
                     document.getElementById('email').value = '';
                 } else {
-                    // Rejection from the backend (e.g., too far, duplicate device, or closed code)
-                    setMessage(`Submission failed (Server Check): ${result.message || 'An unknown error occurred on the server.'}`, 'error');
+                    setMessage(`Failed: ${result.message}`, 'error');
                 }
-
             } catch (error) {
-                console.error("Fetch Error:", error);
-                setMessage("Network Error: Could not connect to the attendance system after retries. Please check your connection.", 'error');
+                setMessage("Network Error. Please try again.", 'error');
             } finally {
                 setSubmitting(false);
             }
         }
 
-        // MODIFIED window.onload (Now asynchronous to wait for coordinates)
+        // ======================================================================
+        // 5. INITIALIZATION
+        // ======================================================================
         window.onload = async () => {
-            // 1. Fetch coordinates first (asynchronously)
             await fetchClassroomCoordinates();
-
-            // 2. CRITICAL ADDITION: Get or create the unique token and set the hidden field
+            
             const token = getOrCreateDeviceToken();
             deviceTokenHidden.value = token;
 
             const lectureCode = getUrlParameter('code').toUpperCase(); 
             
-            // 3. Update UI based on loaded data
             if (lectureCode) {
                 lectureCodeDisplay.textContent = lectureCode;
                 lectureCodeHidden.value = lectureCode;
-                // Only enable the button if the lecture code AND coordinates are loaded
                 submitButton.disabled = !classroomCoordinates; 
-                submitButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                submitButton.classList.add('bg-blue-600');
                 submitButton.classList.remove('bg-blue-400');
-                buttonText.textContent = classroomCoordinates ? 'Check Location & Submit Attendance' : 'Loading Location Data...';
-                setMessage('Lecture code detected. Enter your email to proceed.', 'info');
+                buttonText.textContent = classroomCoordinates ? 'Check Location & Submit Attendance' : 'Loading...';
             } else {
                 lectureCodeDisplay.textContent = "Error: Code Missing";
-                lectureCodeDisplay.classList.remove('text-blue-600', 'bg-blue-50');
-                lectureCodeDisplay.classList.add('text-red-600', 'bg-red-100');
-                setMessage("ERROR: No lecture code found in the URL. Please ensure you scanned the correct QR code.", 'error');
+                setMessage("Scan the QR code again.", 'error');
             }
         };
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
